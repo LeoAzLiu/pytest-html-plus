@@ -339,9 +339,7 @@ def pytest_sessionfinish(session, exitstatus):
         output_path=json_path,
     )
 
-    should_generate_html = session.config.getoption(
-        "--plus-email"
-    ) or not session.config.getoption("--plus-no-html")
+    should_generate_html = not session.config.getoption("--plus-no-html")
 
     if should_generate_html:
         script_path = os.path.join(os.path.dirname(__file__), "generate_html_report.py")
@@ -384,7 +382,7 @@ def pytest_sessionfinish(session, exitstatus):
             except Exception:
                 logger.warning("Could not clean up screenshots directory")
 
-    if session.config.getoption("--plus-email"):
+    if should_generate_html and session.config.getoption("--plus-email"):
         try:
             config = load_email_env()
             config["report_path"] = html_output

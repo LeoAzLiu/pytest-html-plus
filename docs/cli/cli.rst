@@ -32,7 +32,7 @@ Overview
    * - ``--plus-no-html``
      - Disable HTML report generation
      - ``False``
-     - Useful when integrating. ``--plus-email`` will force HTML generation even if this flag is set
+     - Useful when integrating. ``--plus-email`` will be disabled if this flag is set
    * - ``--html-output``
      - Directory for HTML output
      - ``report_output``
