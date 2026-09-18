@@ -235,17 +235,25 @@ def pytest_runtest_makereport(item, call):
                 except KeyError:
                     caplog_text = None
 
-        screenshot_path = config.getoption("--screenshots") or "screenshots"
-
         should_capture_screenshot = report.when in ("setup", "call") and (
             capture_option == "all"
             or (capture_option == "failed" and report.outcome == "failed")
         )
 
+        screenshot_path = None
         if should_capture_screenshot:
+            html_output = config.getoption("--html-output") or "report_output"
+            screenshots_opt = config.getoption("--screenshots") or "screenshots"
+            # Direct-to-Destination: default to <html_output>/screenshots
+            if screenshots_opt and screenshots_opt != "screenshots":
+                screenshots_dir = screenshots_opt
+            else:
+                screenshots_dir = os.path.join(html_output, "screenshots")
+
             driver = resolve_driver(item)
             if driver:
-                screenshot_path = take_screenshot_generic(screenshot_path, item, driver)
+                saved = take_screenshot_generic(screenshots_dir, item, driver)
+                screenshot_path = os.path.normpath(os.path.abspath(saved))
 
         worker_id = os.getenv("PYTEST_XDIST_WORKER") or "main"
 
@@ -282,7 +290,7 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    reporter = session.config._json_reporter
+    reporter: JSONReporter = session.config._json_reporter
 
     raw_json_report = session.config.getoption("--json-report")
     html_output = session.config.getoption("--html-output") or "report_output"
@@ -340,6 +348,24 @@ def pytest_sessionfinish(session, exitstatus):
     )
 
     should_generate_html = not session.config.getoption("--plus-no-html")
+
+    if not should_generate_html:
+        html_output = session.config.getoption("--html-output") or "report_output"
+        html_screenshot_dir = os.path.normpath(os.path.join(html_output, "screenshots"))
+        os.makedirs(html_screenshot_dir, exist_ok=True)
+        # force save screenshots
+        for test in reporter.results.values():
+            screen_path = test["screenshot"]
+            if screen_path is None:
+                continue
+
+            # if exist in html screenshot output
+            if os.path.dirname(screen_path) == os.path.abspath(html_screenshot_dir):
+                continue
+
+            # copy to html_screenshot_dir
+            dest_path = os.path.join(html_screenshot_dir, os.path.basename(screen_path))
+            shutil.copyfile(screen_path, dest_path)
 
     if should_generate_html:
         script_path = os.path.join(os.path.dirname(__file__), "generate_html_report.py")
