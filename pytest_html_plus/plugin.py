@@ -374,7 +374,7 @@ def pytest_sessionfinish(session, exitstatus):
     else:
         # no html backup screenshot
         if source_screenshot_dir != html_screenshot_dir:
-            # 不同路径时进行备份
+            # not backup when in same directory
             os.makedirs(html_screenshot_dir, exist_ok=True)
 
             for root, _, files in os.walk(source_screenshot_dir):
