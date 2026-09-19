@@ -53,31 +53,6 @@ def run_pytest_in_tmp(tmp_path, test_source, extra_args=None):
     return result
 
 
-def test_screenshot_direct_to_destination(tmp_path):
-    """Failure screenshots are written directly to <html-output>/screenshots/
-
-    without polluting the root directory with a temporary screenshots/ folder.
-    """
-    test_code = """
-        def test_ui_failure(page):
-            assert False, "UI error"
-    """
-    result = run_pytest_in_tmp(tmp_path, test_code)
-    assert result.returncode != 0
-
-    # 1. Screenshot should exist directly in report_output/screenshots
-    dest_dir = tmp_path / HTML_OUTPUT / "screenshots"
-    assert dest_dir.exists(), f"Destination directory {dest_dir} does not exist"
-    screenshots = list(dest_dir.glob("*.png"))
-    assert len(screenshots) == 1
-    assert "test_ui_failure_failure.png" in screenshots[0].name
-    assert screenshots[0].read_bytes() == b"fake-png-screenshot-bytes"
-
-    # 2. No legacy root 'screenshots' directory should have been created
-    root_screenshots = tmp_path / "screenshots"
-    assert not root_screenshots.exists(), "Root screenshots directory should not exist"
-
-
 def test_screenshot_retained_with_plus_no_html(tmp_path):
     """When --plus-no-html is set, the screenshot is directly stored in
 
@@ -103,7 +78,7 @@ def test_screenshot_retained_with_plus_no_html(tmp_path):
 def test_screenshot_with_custom_screenshot(tmp_path):
     """When --plus-no-html and --screenshot is set, the screenshot shouold been copied
 
-    the custome should been keep
+    the custome should been delete
     """
     test_code = """
         def test_ui_failure(page):
@@ -123,9 +98,32 @@ def test_screenshot_with_custom_screenshot(tmp_path):
     assert "test_ui_failure_failure.png" in screenshots[0].name
     assert screenshots[0].read_bytes() == b"fake-png-screenshot-bytes"
 
-    # 2. Raw screenshot should been keep which related to json report
+    # 2. Raw screenshot should been delete
     root_screenshots = tmp_path / "cc"
-    assert root_screenshots.exists(), "Root screenshots directory should exist"
+    assert not root_screenshots.exists(), "Root screenshots directory should delete"
 
     # 3. report.html should not exist
     assert not (tmp_path / HTML_OUTPUT / "report.html").exists()
+
+
+def test_screenshot_same_directory(tmp_path) -> None:
+    """When screeshots same as html_out shuold keep the directory"""
+    test_code = """
+            def test_ui_failure(page):
+                assert False, "UI fail"
+        """
+
+    result = run_pytest_in_tmp(
+        tmp_path,
+        test_code,
+        extra_args=["--screenshots=report_output/screenshot", "--plus-no-html"],
+    )
+    assert result.returncode != 0
+
+    # 1. Screenshot should exist been copied from --screenshots
+    dest_dir = tmp_path / HTML_OUTPUT / "screenshots"
+    assert dest_dir.exists(), f"Destination directory {dest_dir} does not exist"
+    screenshots = list(dest_dir.glob("*.png"))
+    assert len(screenshots) == 1
+    assert "test_ui_failure_failure.png" in screenshots[0].name
+    assert screenshots[0].read_bytes() == b"fake-png-screenshot-bytes"
