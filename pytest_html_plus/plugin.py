@@ -342,11 +342,13 @@ def pytest_sessionfinish(session, exitstatus):
 
     should_generate_html = not session.config.getoption("--plus-no-html")
 
-    source_screenshot_dir = os.path.abspath(screenshots_path)
-    html_screenshot_dir = os.path.normpath(os.path.join(html_output, "screenshots"))
+    source_screenshot_dir = Path(screenshots_path).resolve()
+    html_screenshot_dir = (Path(html_output) / "screenshots").resolve()
 
     if should_generate_html:
-        script_path = os.path.join(os.path.dirname(__file__), "generate_html_report.py")
+        script_path: str = os.path.join(
+            os.path.dirname(__file__), "generate_html_report.py"
+        )
         if not os.path.exists(script_path):
             logger.warning(
                 f"Report generation script not found at {script_path}. "
@@ -375,7 +377,7 @@ def pytest_sessionfinish(session, exitstatus):
         # no html backup screenshot
         if source_screenshot_dir != html_screenshot_dir:
             # not backup when in same directory
-            os.makedirs(html_screenshot_dir, exist_ok=True)
+            html_screenshot_dir.mkdir(parents=True, exist_ok=True)
 
             for root, _, files in os.walk(source_screenshot_dir):
                 for file in files:
